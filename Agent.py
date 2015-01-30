@@ -43,7 +43,7 @@ class Agent:
         print "Working on problem", problem.getName()
         
         #set default answer
-        answer = "1"
+        answer = "7"
         #Get Figures
         A = problem.getFigures().get("A")
         B = problem.getFigures().get("B")
@@ -65,58 +65,100 @@ class Agent:
         Cto6 = self.getRelationships(C,six)
 
         possible = {"1":Cto1, "2":Cto2, "3":Cto3, "4":Cto4, "5":Cto5, "6":Cto6}
+##        for name,rels in possible.iteritems():
+##            print rels
         #pick best frame
         for name,rels in possible.iteritems():
             if AtoB == rels:
                 print "match found!"
+                #print rels
                 answer = name
-                break
+                break #TODO INSTEAD OF BREAKING COMPARE POSSIBLE SOLNS
         
         print "Answer:", answer
         return answer
 
     def getRelationships(self,A,B):
         #generates a dictionary of lists of relations between each object A->B
-        B_rels = {}
-        for A_Obj,B_Obj in zip(A.getObjects(),B.getObjects()):
-            B_rels[B_Obj.getName()] = []
-            A_atts = {}
-            B_atts = {}
-            for A_att,B_att in zip(A_Obj.getAttributes(),B_Obj.getAttributes()):
-                A_atts[A_att.getName()] = A_att.getValue()
-                B_atts[B_att.getName()] = B_att.getValue()
+        A_Objs = A.getObjects()
+        B_Objs = B.getObjects()
 
-            try:
-                if A_atts["shape"] == B_atts["shape"]:
-                    B_rels[B_Obj.getName()].append("shapeSame")
-                else:
-                    B_rels[B_Obj.getName()].append("shapeDiff")
-            except KeyError:
-                pass
 
-            try:
-                if A_att["size"] == B_att["size"]:
-                    B_rels[B_Obj.getName()].append("sizeSame")
-                else:
-                    B_rels[B_Obj.getName()].append("sizeDiff")
-            except KeyError:
-                pass
-##
-##            try:
-##                if A_att["fill"] == B_att["fill"]:
-##                    #fill unchanged
-##                else:
-##                    #fill changed
-##            except KeyError:
-##                pass
             
-    
-                #"angle"
-##                "above"
-##                "vertical-flip"
-##                "inside"
-##                "left-of"
-##                "overlaps"
 
-        return B_rels
+
+        rels = {}
+        A_names = [A_Obj.getName() for A_Obj in A_Objs]
+        B_names = [B_Obj.getName() for B_Obj in B_Objs]
+        
+        for A_name,B_name in [ (n if n in A_names else None, n if n in B_names else None) for n in set(A_names + B_names)]:
+            print A_name,B_name
+            if A_name:
+                for n in A_Objs:
+                    if n.getName() == A_name:
+                        A_Obj = n
+            else:
+                A_Obj = None
+            if B_name:
+                for n in B_Objs:
+                    if n.getName() == B_name:
+                        B_Obj = n
+            else:
+                A_Obj = None
+
+            if not A_name:
+                #obj was added to b
+                rels[B_name] = []
+                rels[B_name].append("added")
+            elif not B_name:
+                #obj was deleted from a
+                rels[A_name] = []
+                rels[A_name].append("deleted")
+            else:
+                rels[B_name] = []
+                A_atts = {}
+                B_atts = {}
+                for A_att,B_att in zip(A_Obj.getAttributes(),B_Obj.getAttributes()):
+                    A_atts[A_att.getName()] = A_att.getValue()
+                    B_atts[B_att.getName()] = B_att.getValue()
+
+                #now for some attribute rules:
+                try:
+                    if A_atts["shape"] == B_atts["shape"]:
+                        rels[B_Obj.getName()].append("shapeSame")
+                    else:
+                        rels[B_Obj.getName()].append("shapeDiff")
+                except KeyError:
+                    pass
+
+                try:
+                    if A_atts["size"] == B_atts["size"]:
+                        rels[B_Obj.getName()].append("sizeSame")
+                    else:
+                        rels[B_Obj.getName()].append("sizeDiff")
+                except KeyError:
+                    pass
+
+                try:
+                    if A_atts["fill"] == B_atts["fill"]:
+                        rels[B_Obj.getName()].append("fillSame")
+                    else:
+                        rels[B_Obj.getName()].append("fillDiff")
+                except KeyError:
+                    pass
+
+                try:
+                    if A_atts["angle"] == B_atts["angle"]:
+                        rels[B_Obj.getName()].append("angleSame")
+                    else:
+                        rels[B_Obj.getName()].append("angleDiff")
+                except KeyError:
+                    pass
+    ##                "above"
+    ##                "vertical-flip"
+    ##                "inside"
+    ##                "left-of"
+    ##                "overlaps"
+        print rels
+        return rels
             
