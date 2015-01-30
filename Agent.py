@@ -40,7 +40,11 @@ class Agent:
     # @param problem the RavensProblem your agent should solve
     # @return your Agent's answer to this problem
     def Solve(self,problem):
+        print "Working on problem", problem.getName()
+        
+        #set default answer
         answer = "1"
+        #Get Figures
         A = problem.getFigures().get("A")
         B = problem.getFigures().get("B")
         C = problem.getFigures().get("C")
@@ -51,18 +55,68 @@ class Agent:
         five = problem.getFigures().get("5")
         six = problem.getFigures().get("6")
 
-##        A_objects = A.getObjects()
-##        A_attribs = A_objects[0].getAttributes()
-##        A_values = A_attribs[0].getValue()
-##        A_name = A_attribs[0].getName()
-        A_shape = A.getObjects()[0].getAttributes()[0].getValue()
-        B_shape = B.getObjects()[0].getAttributes()[0].getValue()
-        C_shape = C.getObjects()[0].getAttributes()[0].getValue()
-        #print A_name, A_values
-        print B_shape
-        if A_shape == B_shape:
-            for frame in [one,two,three,four,five,six]:
-                if C_shape == frame.getObjects()[0].getAttributes()[0].getValue():
-                    answer = frame.getName()
-                
+        #generate relationships between frames
+        AtoB = self.getRelationships(A,B)
+        Cto1 = self.getRelationships(C,one)
+        Cto2 = self.getRelationships(C,two)
+        Cto3 = self.getRelationships(C,three)
+        Cto4 = self.getRelationships(C,four)
+        Cto5 = self.getRelationships(C,five)
+        Cto6 = self.getRelationships(C,six)
+
+        possible = {"1":Cto1, "2":Cto2, "3":Cto3, "4":Cto4, "5":Cto5, "6":Cto6}
+        #pick best frame
+        for name,rels in possible.iteritems():
+            if AtoB == rels:
+                print "match found!"
+                answer = name
+                break
+        
+        print "Answer:", answer
         return answer
+
+    def getRelationships(self,A,B):
+        #generates a dictionary of lists of relations between each object A->B
+        B_rels = {}
+        for A_Obj,B_Obj in zip(A.getObjects(),B.getObjects()):
+            B_rels[B_Obj.getName()] = []
+            A_atts = {}
+            B_atts = {}
+            for A_att,B_att in zip(A_Obj.getAttributes(),B_Obj.getAttributes()):
+                A_atts[A_att.getName()] = A_att.getValue()
+                B_atts[B_att.getName()] = B_att.getValue()
+
+            try:
+                if A_atts["shape"] == B_atts["shape"]:
+                    B_rels[B_Obj.getName()].append("shapeSame")
+                else:
+                    B_rels[B_Obj.getName()].append("shapeDiff")
+            except KeyError:
+                pass
+
+            try:
+                if A_att["size"] == B_att["size"]:
+                    B_rels[B_Obj.getName()].append("sizeSame")
+                else:
+                    B_rels[B_Obj.getName()].append("sizeDiff")
+            except KeyError:
+                pass
+##
+##            try:
+##                if A_att["fill"] == B_att["fill"]:
+##                    #fill unchanged
+##                else:
+##                    #fill changed
+##            except KeyError:
+##                pass
+            
+    
+                #"angle"
+##                "above"
+##                "vertical-flip"
+##                "inside"
+##                "left-of"
+##                "overlaps"
+
+        return B_rels
+            
