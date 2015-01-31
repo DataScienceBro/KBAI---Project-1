@@ -43,7 +43,7 @@ class Agent:
         print "Working on problem", problem.getName()
         
         #set default answer
-        answer = "7"
+        answer = []
         #Get Figures
         A = problem.getFigures().get("A")
         B = problem.getFigures().get("B")
@@ -55,7 +55,7 @@ class Agent:
         five = problem.getFigures().get("5")
         six = problem.getFigures().get("6")
 
-        #generate relationships between frames
+        #generate transformation relationships between frames
         AtoB = self.getRelationships(A,B)
         Cto1 = self.getRelationships(C,one)
         Cto2 = self.getRelationships(C,two)
@@ -65,18 +65,43 @@ class Agent:
         Cto6 = self.getRelationships(C,six)
 
         possible = {"1":Cto1, "2":Cto2, "3":Cto3, "4":Cto4, "5":Cto5, "6":Cto6}
-##        for name,rels in possible.iteritems():
-##            print rels
-        #pick best frame
+
+        #Choose answers C-># with same transformations as A->B
         for name,rels in possible.iteritems():
             if AtoB == rels:
-                print "match found!"
+                #print "match found!"
                 #print rels
-                answer = name
-                break #TODO INSTEAD OF BREAKING COMPARE POSSIBLE SOLNS
+                answer.append(name)
+        print "before positions", answer
+        #if there is more than one possible answer, compare relative positions of objects in B with solutions
+        if len(answer) > 1:
+            #generate positional relationships in frames B and 1-6
+            B_pos = self.getPositions(B)
+            one_pos = self.getPositions(one)
+            two_pos = self.getPositions(two)
+            three_pos = self.getPositions(three)
+            four_pos = self.getPositions(four)
+            five_pos = self.getPositions(five)
+            six_pos = self.getPositions(six)
+
+            possible = {"1":one_pos, "2":two_pos, "3":three_pos, "4":four_pos, "5":five_pos, "6":six_pos}
+            #eliminate answers not in answer
+            for k in possible.keys(): 
+                if k not in answer:
+                    del possible[k]
+            #eliminate answers with different positions than B
+            B_pos = sorted(B_pos)
+            for name,positions in possible.iteritems():
+                if B_pos != sorted(positions):
+                    answer.remove(name)
+                    
         
         print "Answer:", answer
-        return answer
+        return min(answer) if len(answer) > 0 else "7" #pick one randomly if multiple answers left
+
+
+
+
 
     def getRelationships(self,A,B):
         #generates a dictionary of lists of relations between each object A->B
@@ -92,7 +117,7 @@ class Agent:
         B_names = [B_Obj.getName() for B_Obj in B_Objs]
         
         for A_name,B_name in [ (n if n in A_names else None, n if n in B_names else None) for n in set(A_names + B_names)]:
-            print A_name,B_name
+            #print A_name,B_name
             if A_name:
                 for n in A_Objs:
                     if n.getName() == A_name:
@@ -143,22 +168,68 @@ class Agent:
                     if A_atts["fill"] == B_atts["fill"]:
                         rels[B_Obj.getName()].append("fillSame")
                     else:
-                        rels[B_Obj.getName()].append("fillDiff")
+                        rels[B_Obj.getName()].append(A_atts["fill"] + B_atts["fill"])
                 except KeyError:
                     pass
 
                 try:
-                    if A_atts["angle"] == B_atts["angle"]:
-                        rels[B_Obj.getName()].append("angleSame")
-                    else:
-                        rels[B_Obj.getName()].append("angleDiff")
+                    A_atts["angle"]
                 except KeyError:
-                    pass
-    ##                "above"
-    ##                "vertical-flip"
-    ##                "inside"
-    ##                "left-of"
-    ##                "overlaps"
+                    try:
+                        B_atts["angle"]
+                    except KeyError:
+                        rels[B_Obj.getName()].append("angleSame") #neither have angle
+                    else:
+                        rels[B_Obj.getName()].append("angleDiff") #only B has angle
+                else:
+                    try:
+                        B_atts["angle"]
+                    except KeyError:
+                        rels[B_Obj.getName()].append("angleDiff") #only A has angle
+                    else:
+                        if A_atts["angle"] == B_atts["angle"]:
+                            rels[B_Obj.getName()].append("angleSame")
+                        else:
+                            rels[B_Obj.getName()].append("angleDiff")
+                        
+##                "vertical-flip"
         print rels
         return rels
+
+    def getPositions(self,A):
+        A_Objs = A.getObjects()
+        A_names = [A_Obj.getName() for A_Obj in A_Objs]
+        pos = []
+        for A_Obj in A_Objs:
+            A_atts = A_Obj.getAttributes()
+            objpos = []
+           # print A_atts
             
+            for att in A_atts:
+            
+                try:
+                    if att.getName() == "inside":
+                        objpos.append("inside")
+                except KeyError:
+                    pass
+
+                try:
+                    if att.getName() == "above":
+                        objpos.append("above")
+                except KeyError:
+                    pass
+
+                try:
+                    if att.getName() == "left-of":
+                        objpos.append("left-of")
+                except KeyError:
+                    pass
+                try:
+                    if att.getName() == "overlaps":
+                        objpos.append("overlaps")
+                except KeyError:
+                    pass
+            pos.append(objpos)
+      
+        print pos
+        return pos
