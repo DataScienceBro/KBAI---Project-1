@@ -69,7 +69,7 @@ class Agent:
 
         #Choose answers C-># with same transformations as A->B
         for name,rels in possible.iteritems():
-            if AtoB == rels:
+            if sorted(AtoB.values()) == sorted(rels.values()):
                 #print "match found!"
                 #print rels
                 answer.append(name)
@@ -92,10 +92,14 @@ class Agent:
                     del possible[k]
             #eliminate answers with different positions than B
             B_pos = sorted(B_pos)
+            scores = {}
             for name,positions in possible.iteritems():
-                if B_pos != sorted(positions):
+                scores[name] = abs(cmp(B_pos,sorted(positions)))
+
+            print scores
+            for name,score in scores.iteritems():
+                if score > min(scores.itervalues()):
                     answer.remove(name)
-                    
         
         print "Answer:", answer
         return min(answer) if len(answer) > 0 else "7" #pick one randomly if multiple answers left
@@ -123,7 +127,7 @@ class Agent:
         for B_names in B_permutations:
             weight = 0
             rels = {}
-            if problem.getName() == "2x1 Basic Problem 08":
+            if problem.getName() == "2x1 Basic Problem 14":
                 print zip(A_names,B_names)
             for A_name,B_name in zip(A_names,B_names):
                 
@@ -170,6 +174,16 @@ class Agent:
                         pass
 
                     try:
+                        A_atts["fill"]
+                    except KeyError:
+                        A_atts["fill"] = "no"
+
+                    try:
+                        B_atts["fill"]
+                    except KeyError:
+                        B_atts["fill"] = "no"
+
+                    try:
                         if A_atts["fill"] == B_atts["fill"]:
                             rels[B_name].append("fillSame")
                             weight += 5
@@ -210,7 +224,7 @@ class Agent:
             if weight > bestweight:
                 bestrels = rels
                 bestweight = weight
-            if problem.getName() == "2x1 Basic Problem 08":
+            if problem.getName() == "2x1 Basic Problem 14":
                 #print A_names, B_permutations
                 print rels, weight
                 
