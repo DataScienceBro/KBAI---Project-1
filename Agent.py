@@ -7,6 +7,7 @@
 # def Solve(self,problem)
 #
 # These methods will be necessary for the project's main method to run.
+import itertools
 class Agent:
     # The default constructor for your Agent. Make sure to execute any
     # processing necessary before your Agent starts solving problems here.
@@ -56,13 +57,13 @@ class Agent:
         six = problem.getFigures().get("6")
 
         #generate transformation relationships between frames
-        AtoB = self.getRelationships(A,B)
-        Cto1 = self.getRelationships(C,one)
-        Cto2 = self.getRelationships(C,two)
-        Cto3 = self.getRelationships(C,three)
-        Cto4 = self.getRelationships(C,four)
-        Cto5 = self.getRelationships(C,five)
-        Cto6 = self.getRelationships(C,six)
+        AtoB = self.getRelationships(A,B,{},problem)
+        Cto1 = self.getRelationships(C,one,AtoB,problem)
+        Cto2 = self.getRelationships(C,two,AtoB,problem)
+        Cto3 = self.getRelationships(C,three,AtoB,problem)
+        Cto4 = self.getRelationships(C,four,AtoB,problem)
+        Cto5 = self.getRelationships(C,five,AtoB,problem)
+        Cto6 = self.getRelationships(C,six,AtoB,problem)
 
         possible = {"1":Cto1, "2":Cto2, "3":Cto3, "4":Cto4, "5":Cto5, "6":Cto6}
 
@@ -103,98 +104,119 @@ class Agent:
 
 
 
-    def getRelationships(self,A,B):
+    def getRelationships(self,A,B,matchWith,problem):
         #generates a dictionary of lists of relations between each object A->B
         A_Objs = A.getObjects()
         B_Objs = B.getObjects()
-
-
-            
-
-
-        rels = {}
+        
         A_names = [A_Obj.getName() for A_Obj in A_Objs]
         B_names = [B_Obj.getName() for B_Obj in B_Objs]
-        
-        for A_name,B_name in [ (n if n in A_names else None, n if n in B_names else None) for n in set(A_names + B_names)]:
-            #print A_name,B_name
-            if A_name:
-                for n in A_Objs:
-                    if n.getName() == A_name:
-                        A_Obj = n
-            else:
-                A_Obj = None
-            if B_name:
-                for n in B_Objs:
-                    if n.getName() == B_name:
-                        B_Obj = n
-            else:
-                A_Obj = None
+        while len(A_names) != len(B_names):
+            if len(A_names) > len(B_names):
+                B_names.append(None)
+            if len(B_names) > len(A_names):
+                A_names.append(None)
+        B_permutations = list(itertools.permutations(B_names))
 
-            if not A_name:
-                #obj was added to b
-                rels[B_name] = []
-                rels[B_name].append("added")
-            elif not B_name:
-                #obj was deleted from a
-                rels[A_name] = []
-                rels[A_name].append("deleted")
-            else:
-                rels[B_name] = []
-                A_atts = {}
-                B_atts = {}
-                for A_att,B_att in zip(A_Obj.getAttributes(),B_Obj.getAttributes()):
-                    A_atts[A_att.getName()] = A_att.getValue()
-                    B_atts[B_att.getName()] = B_att.getValue()
-
-                #now for some attribute rules:
-                try:
-                    if A_atts["shape"] == B_atts["shape"]:
-                        rels[B_Obj.getName()].append("shapeSame")
-                    else:
-                        rels[B_Obj.getName()].append("shapeDiff")
-                except KeyError:
-                    pass
-
-                try:
-                    if A_atts["size"] == B_atts["size"]:
-                        rels[B_Obj.getName()].append("sizeSame")
-                    else:
-                        rels[B_Obj.getName()].append("sizeDiff")
-                except KeyError:
-                    pass
-
-                try:
-                    if A_atts["fill"] == B_atts["fill"]:
-                        rels[B_Obj.getName()].append("fillSame")
-                    else:
-                        rels[B_Obj.getName()].append(A_atts["fill"] + B_atts["fill"])
-                except KeyError:
-                    pass
-
-                try:
-                    A_atts["angle"]
-                except KeyError:
-                    try:
-                        B_atts["angle"]
-                    except KeyError:
-                        rels[B_Obj.getName()].append("angleSame") #neither have angle
-                    else:
-                        rels[B_Obj.getName()].append("angleDiff") #only B has angle
+        bestweight = 0
+        bestrels = {}
+        for B_names in B_permutations:
+            weight = 0
+            rels = {}
+            if problem.getName() == "2x1 Basic Problem 08":
+                print zip(A_names,B_names)
+            for A_name,B_name in zip(A_names,B_names):
+                
+                for obj in A_Objs:
+                    if obj.getName() == A_name:
+                        A_Obj = obj
+                for obj in B_Objs:
+                    if obj.getName() == B_name:
+                        B_Obj = obj
+                if not A_name:
+                    #obj was added to b
+                    rels[B_name] = []
+                    rels[B_name].append("added")
+                elif not B_name:
+                    #obj was deleted from a
+                    rels[A_name] = []
+                    rels[A_name].append("deleted")
                 else:
+                    rels[B_name] = []
+                    A_atts = {}
+                    B_atts = {}
+                    for A_att,B_att in zip(A_Obj.getAttributes(),B_Obj.getAttributes()):
+                        A_atts[A_att.getName()] = A_att.getValue()
+                        B_atts[B_att.getName()] = B_att.getValue()
+
+                    #now for some attribute rules:
                     try:
-                        B_atts["angle"]
-                    except KeyError:
-                        rels[B_Obj.getName()].append("angleDiff") #only A has angle
-                    else:
-                        if A_atts["angle"] == B_atts["angle"]:
-                            rels[B_Obj.getName()].append("angleSame")
+                        if A_atts["shape"] == B_atts["shape"]:
+                            rels[B_name].append("shapeSame")
+                            weight += 5
                         else:
-                            rels[B_Obj.getName()].append("angleDiff")
+                            rels[B_name].append("shapeDiff")
+                    except KeyError:
+                        pass
+
+                    try:
+                        if A_atts["size"] == B_atts["size"]:
+                            rels[B_name].append("sizeSame")
+                            weight += 5
+                        else:
+                            rels[B_name].append("sizeDiff")
+                            weight += 2
+                    except KeyError:
+                        pass
+
+                    try:
+                        if A_atts["fill"] == B_atts["fill"]:
+                            rels[B_name].append("fillSame")
+                            weight += 5
+                        else:
+                            rels[B_name].append(A_atts["fill"] + B_atts["fill"])
+                            weight += 2
+                    except KeyError:
+                        pass
+
+                    try:
+                        A_atts["angle"]
+                    except KeyError:
+                        try:
+                            B_atts["angle"]
+                        except KeyError:
+                            rels[B_name].append("angleSame") #neither have angle
+                            weight += 5
+                        else:
+                            rels[B_name].append("angleDiff") #only B has angle
+                            weight += 3
+                    else:
+                        try:
+                            B_atts["angle"]
+                        except KeyError:
+                            rels[B_name].append("angleDiff") #only A has angle
+                        else:
+                            if A_atts["angle"] == B_atts["angle"]:
+                                rels[B_name].append("angleSame")
+                                weight += 5
+                            else:
+                                rels[B_name].append("angleDiff")
+                                weight +=3
                         
 ##                "vertical-flip"
-        print rels
-        return rels
+
+            if rels == matchWith:
+                weight += 100
+            if weight > bestweight:
+                bestrels = rels
+                bestweight = weight
+            if problem.getName() == "2x1 Basic Problem 08":
+                #print A_names, B_permutations
+                print rels, weight
+                
+            
+        #print bestrels
+        return bestrels
 
     def getPositions(self,A):
         A_Objs = A.getObjects()

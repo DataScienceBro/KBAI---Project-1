@@ -7,7 +7,7 @@
 2x1 Basic Problem 05: 2 Correct (2)
 2x1 Basic Problem 06: 5 Correct (5)
 2x1 Basic Problem 07: 2 Correct (2)
-2x1 Basic Problem 08: 7 Incorrect (1)
+2x1 Basic Problem 08: 1 Correct (1)
 2x1 Basic Problem 09: 1 Correct (1)
 2x1 Basic Problem 10: 4 Correct (4)
 2x1 Basic Problem 11: 7 Incorrect (4)
@@ -27,11 +27,11 @@
 2x1 Challenge Problem 02: 1 Incorrect (4)
 2x1 Challenge Problem 03: 2 Incorrect (6)
 2x1 Challenge Problem 04: 1 Incorrect (6)
-2x1 Challenge Problem 05: 3 Incorrect (4)
+2x1 Challenge Problem 05: 1 Incorrect (4)
 2x1 Challenge Problem 06: 1 Incorrect (2)
 
 2x1 Classmates Problems
 -----------
 2x1 Classmates' Problem 01: 2 Correct (2)
-2x1 Classmates' Problem 02: 2 Incorrect (5)
+2x1 Classmates' Problem 02: 5 Correct (5)
 
