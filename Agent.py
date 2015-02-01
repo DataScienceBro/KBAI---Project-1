@@ -68,11 +68,30 @@ class Agent:
         possible = {"1":Cto1, "2":Cto2, "3":Cto3, "4":Cto4, "5":Cto5, "6":Cto6}
 
         #Choose answers C-># with same transformations as A->B
+
+        scores = {}
         for name,rels in possible.iteritems():
-            if sorted(AtoB.values()) == sorted(rels.values()):
-                #print "match found!"
-                #print rels
-                answer.append(name)
+##            AtoB_flat = []
+##            rels_flat = []
+##            for values in AtoB.values():
+##                AtoB_flat.extend(values)
+##            for values in rels.values():
+##                rels_flat.extend(values)
+            scores[name] = 0
+            for AtoBval,relsval in zip(AtoB.values(),rels.values()):
+                scores[name] += len(set(AtoBval).intersection(relsval))
+            
+            #scores[name] = len(set(AtoB_flat).intersection(rels_flat))
+        print scores
+        for name,score in scores.iteritems():
+                if score == max(scores.itervalues()):
+                    answer.append(name)
+
+##        for name,rels in possible.iteritems():
+##            if sorted(AtoB.values()) == sorted(rels.values()):
+##                #print "match found!"
+##                #print rels
+##                answer.append(name)
         print "before positions", answer
         #if there is more than one possible answer, compare relative positions of objects in B with solutions
         if len(answer) > 1:
@@ -91,14 +110,14 @@ class Agent:
                 if k not in answer:
                     del possible[k]
             #eliminate answers with different positions than B
-            B_pos = sorted(B_pos)
+            
             scores = {}
             for name,positions in possible.iteritems():
-                scores[name] = abs(cmp(B_pos,sorted(positions)))
+                scores[name] = len(set(map(tuple,B_pos)).intersection(map(tuple,positions)))
 
-            print scores
+            #print scores
             for name,score in scores.iteritems():
-                if score > min(scores.itervalues()):
+                if score < max(scores.itervalues()):
                     answer.remove(name)
         
         print "Answer:", answer
@@ -127,8 +146,8 @@ class Agent:
         for B_names in B_permutations:
             weight = 0
             rels = {}
-            if problem.getName() == "2x1 Basic Problem 14":
-                print zip(A_names,B_names)
+            #if problem.getName() == "2x1 Basic Problem 17":
+             #   print zip(A_names,B_names)
             for A_name,B_name in zip(A_names,B_names):
                 
                 for obj in A_Objs:
@@ -183,40 +202,64 @@ class Agent:
                     except KeyError:
                         B_atts["fill"] = "no"
 
-                    try:
-                        if A_atts["fill"] == B_atts["fill"]:
-                            rels[B_name].append("fillSame")
-                            weight += 5
-                        else:
-                            rels[B_name].append(A_atts["fill"] + B_atts["fill"])
-                            weight += 2
-                    except KeyError:
-                        pass
+                    
+                    if A_atts["fill"] == B_atts["fill"]:
+                        rels[B_name].append("fillSame")
+                        weight += 5
+                    else:
+                        rels[B_name].append("fill:" + A_atts["fill"] + B_atts["fill"])
+                        weight += 2
+                    
 
                     try:
                         A_atts["angle"]
                     except KeyError:
-                        try:
-                            B_atts["angle"]
-                        except KeyError:
-                            rels[B_name].append("angleSame") #neither have angle
-                            weight += 5
-                        else:
-                            rels[B_name].append("angleDiff") #only B has angle
-                            weight += 3
-                    else:
-                        try:
-                            B_atts["angle"]
-                        except KeyError:
-                            rels[B_name].append("angleDiff") #only A has angle
-                        else:
-                            if A_atts["angle"] == B_atts["angle"]:
-                                rels[B_name].append("angleSame")
-                                weight += 5
-                            else:
-                                rels[B_name].append("angleDiff")
-                                weight +=3
+                        A_atts["angle"] = 0
+                    try:
+                        B_atts["angle"]
+                    except KeyError:
+                        B_atts["angle"] = 0
+                     
+                    
+                    if A_atts["shape"] == "circle" and B_atts["shape"] == "circle": #ignore angle changes for circle
+                        if matchWith:
+                            for obj in matchWith.iterkeys():
+                                if 'angleDiff' in matchWith[obj]:
+                                    rels[B_name].append('angleDiff')
+                                    rels[B_name].append([n for n in matchWith[obj] if type(n) == type(1)][0]) #copy angle value
+                                    break
+                                if 'angleSame' in matchWith[obj]:
+                                    rels[B_name].append('angleSame')
+                                    break
+                        elif A_atts["angle"] == B_atts["angle"]:
+                            rels[B_name].append("angleSame")
+                            weight += 4
                         
+                    elif A_atts["angle"] == B_atts["angle"]:
+                        rels[B_name].append("angleSame")
+                        weight += 4
+                    else:
+                        rels[B_name].append("angleDiff")
+                        rels[B_name].append(abs(int(A_atts["angle"]) - int(B_atts["angle"])))
+                        weight +=3
+
+
+                    try:
+                        A_atts["vertical-flip"]
+                    except KeyError:
+                        A_atts["vertical-flip"] = "no"
+                    try:
+                        B_atts["vertical-flip"]
+                    except KeyError:
+                        B_atts["vertical-flip"] = "no"
+
+                    if A_atts["vertical-flip"] == B_atts["vertical-flip"]:
+                        rels[B_name].append("vertflipSame")
+                        
+                    else:
+                        rels[B_name].append("vertflipDiff")
+                        
+                         
 ##                "vertical-flip"
 
             if rels == matchWith:
@@ -224,12 +267,12 @@ class Agent:
             if weight > bestweight:
                 bestrels = rels
                 bestweight = weight
-            if problem.getName() == "2x1 Basic Problem 14":
+            #if problem.getName() == "2x1 Basic Problem 17":
                 #print A_names, B_permutations
-                print rels, weight
+               # print rels, weight
                 
             
-        #print bestrels
+        print bestrels
         return bestrels
 
     def getPositions(self,A):
