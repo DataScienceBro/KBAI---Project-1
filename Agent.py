@@ -43,9 +43,9 @@ class Agent:
     def Solve(self,problem):
         print "Working on problem", problem.getName()
         
-        #set default answer
+        #Potential answers will go in a list
         answer = []
-        #Get Figures
+        #Get Figure objects
         A = problem.getFigures().get("A")
         B = problem.getFigures().get("B")
         C = problem.getFigures().get("C")
@@ -56,7 +56,7 @@ class Agent:
         five = problem.getFigures().get("5")
         six = problem.getFigures().get("6")
 
-        #generate transformation relationships between frames
+        #generate transformation relationships between frames. Returns dictionary of {objectName: transformations}
         AtoB = self.getRelationships(A,B,{},problem)
         Cto1 = self.getRelationships(C,one,AtoB,problem)
         Cto2 = self.getRelationships(C,two,AtoB,problem)
@@ -67,32 +67,18 @@ class Agent:
 
         possible = {"1":Cto1, "2":Cto2, "3":Cto3, "4":Cto4, "5":Cto5, "6":Cto6}
 
-        #Choose answers C-># with same transformations as A->B
-
-        scores = {}
+        #Choose answers C-># with similar transformations as A->B
+        scores = {} #naive 'delta' score
         for name,rels in possible.iteritems():
-##            AtoB_flat = []
-##            rels_flat = []
-##            for values in AtoB.values():
-##                AtoB_flat.extend(values)
-##            for values in rels.values():
-##                rels_flat.extend(values)
             scores[name] = 0
             for AtoBval,relsval in zip(AtoB.values(),rels.values()):
                 scores[name] += len(set(AtoBval).intersection(relsval))
-            
-            #scores[name] = len(set(AtoB_flat).intersection(rels_flat))
-        print scores
+        
         for name,score in scores.iteritems():
                 if score == max(scores.itervalues()):
                     answer.append(name)
 
-##        for name,rels in possible.iteritems():
-##            if sorted(AtoB.values()) == sorted(rels.values()):
-##                #print "match found!"
-##                #print rels
-##                answer.append(name)
-        print "before positions", answer
+        print "Answers after transformations:", answer
         #if there is more than one possible answer, compare relative positions of objects in B with solutions
         if len(answer) > 1:
             #generate positional relationships in frames B and 1-6
@@ -111,16 +97,40 @@ class Agent:
                     del possible[k]
             #eliminate answers with different positions than B
             
-            scores = {}
+            scores = {} #naive 'delta' score
             for name,positions in possible.iteritems():
                 scores[name] = len(set(map(tuple,B_pos)).intersection(map(tuple,positions)))
 
-            #print scores
             for name,score in scores.iteritems():
                 if score < max(scores.itervalues()):
                     answer.remove(name)
-        
-        print "Answer:", answer
+
+        print "Answers after positions:", answer
+        #if there is still more than one possible answer, compare frames B with potential answers for similarity
+                    #e.g. are all shapes same size? same fill or different? etc.
+        if len(answer) > 1:
+            B_fr = self.FrameSimilarity(B)
+            one_fr = self.FrameSimilarity(one)
+            two_fr = self.FrameSimilarity(two)
+            three_fr = self.FrameSimilarity(three)
+            four_fr = self.FrameSimilarity(four)
+            five_fr = self.FrameSimilarity(five)
+            six_fr = self.FrameSimilarity(six)
+
+            possible = {"1":one_fr, "2":two_fr, "3":three_fr, "4":four_fr, "5":five_fr, "6":six_fr}
+            #eliminate answers not in answer
+            for k in possible.keys(): 
+                if k not in answer:
+                    del possible[k]
+            #pick frame most similar to B
+            scores = {}
+            for name,frames in possible.iteritems():
+                scores[name] = len(set(B_fr).intersection(frames))
+            for name,score in scores.iteritems():
+                if score < max(scores.itervalues()):
+                    answer.remove(name)
+        print "Answers after frame comparisons:", answer
+        print ""
         return min(answer) if len(answer) > 0 else "7" #pick one randomly if multiple answers left
 
 
@@ -129,6 +139,7 @@ class Agent:
 
     def getRelationships(self,A,B,matchWith,problem):
         #generates a dictionary of lists of relations between each object A->B
+        #examines each possible mapping of objects from A->B and picks best mapping based on weight
         A_Objs = A.getObjects()
         B_Objs = B.getObjects()
         
@@ -146,8 +157,7 @@ class Agent:
         for B_names in B_permutations:
             weight = 0
             rels = {}
-            #if problem.getName() == "2x1 Basic Problem 17":
-             #   print zip(A_names,B_names)
+            
             for A_name,B_name in zip(A_names,B_names):
                 
                 for obj in A_Objs:
@@ -173,6 +183,7 @@ class Agent:
                         B_atts[B_att.getName()] = B_att.getValue()
 
                     #now for some attribute rules:
+                    #shape
                     try:
                         if A_atts["shape"] == B_atts["shape"]:
                             rels[B_name].append("shapeSame")
@@ -182,6 +193,7 @@ class Agent:
                     except KeyError:
                         pass
 
+                    #size
                     try:
                         if A_atts["size"] == B_atts["size"]:
                             rels[B_name].append("sizeSame")
@@ -192,6 +204,7 @@ class Agent:
                     except KeyError:
                         pass
 
+                    #fill
                     try:
                         A_atts["fill"]
                     except KeyError:
@@ -201,7 +214,6 @@ class Agent:
                         B_atts["fill"]
                     except KeyError:
                         B_atts["fill"] = "no"
-
                     
                     if A_atts["fill"] == B_atts["fill"]:
                         rels[B_name].append("fillSame")
@@ -210,7 +222,7 @@ class Agent:
                         rels[B_name].append("fill:" + A_atts["fill"] + B_atts["fill"])
                         weight += 2
                     
-
+                    #angle
                     try:
                         A_atts["angle"]
                     except KeyError:
@@ -220,7 +232,6 @@ class Agent:
                     except KeyError:
                         B_atts["angle"] = 0
                      
-                    
                     if A_atts["shape"] == "circle" and B_atts["shape"] == "circle": #ignore angle changes for circle
                         if matchWith:
                             for obj in matchWith.iterkeys():
@@ -243,7 +254,7 @@ class Agent:
                         rels[B_name].append(abs(int(A_atts["angle"]) - int(B_atts["angle"])))
                         weight +=3
 
-
+                    #vertical-flip
                     try:
                         A_atts["vertical-flip"]
                     except KeyError:
@@ -258,31 +269,23 @@ class Agent:
                         
                     else:
                         rels[B_name].append("vertflipDiff")
-                        
-                         
-##                "vertical-flip"
 
             if rels == matchWith:
                 weight += 100
             if weight > bestweight:
                 bestrels = rels
                 bestweight = weight
-            #if problem.getName() == "2x1 Basic Problem 17":
-                #print A_names, B_permutations
-               # print rels, weight
-                
-            
-        print bestrels
+           
         return bestrels
 
     def getPositions(self,A):
+        #get relationships between objects in one frame
         A_Objs = A.getObjects()
         A_names = [A_Obj.getName() for A_Obj in A_Objs]
         pos = []
         for A_Obj in A_Objs:
             A_atts = A_Obj.getAttributes()
             objpos = []
-           # print A_atts
             
             for att in A_atts:
             
@@ -310,5 +313,54 @@ class Agent:
                     pass
             pos.append(objpos)
       
-        print pos
         return pos
+
+    def FrameSimilarity(self,A):
+        A_Objs = A.getObjects()
+        frameDesc = []
+        shape = []
+        size = []
+        fill = []
+        rotation = []
+        for A_Obj in A_Objs:
+            A_atts = A_Obj.getAttributes()
+            for att in A_atts:
+                try:
+                    if att.getName() == "shape":
+                        shape.append(att.getValue())
+                except KeyError:
+                    pass
+                try:
+                    if att.getName() == "size":
+                        size.append(att.getValue())
+                except KeyError:
+                    pass
+                try:
+                    if att.getName() == "fill":
+                        fill.append(att.getValue())
+                except KeyError:
+                    pass
+                try:
+                    if att.getName() == "rotation":
+                        rotation.append(att.getValue())
+                except KeyError:
+                    pass
+        if len(set(shape)) <= 1:
+            frameDesc.append("sameShape")
+        else:
+            frameDesc.append("diffShape")
+        if len(set(size)) <= 1:
+            frameDesc.append("sameSize")
+        else:
+            frameDesc.append("diffSize")
+        if len(set(fill)) <= 1:
+            frameDesc.append("sameFill")
+        else:
+            frameDesc.append("diffFill")
+        if len(set(rotation)) <= 1:
+            frameDesc.append("sameRotation")
+        else:
+            frameDesc.append("diffRotation")
+        frameDesc.append(len(A_Objs)) #number of shapes
+        return frameDesc
+            
