@@ -131,7 +131,7 @@ class Agent:
                     answer.remove(name)
         print "Answers after frame comparisons:", answer
         print ""
-        return min(answer) if len(answer) > 0 else "7" #pick one randomly if multiple answers left
+        return min(answer) if len(answer) > 0 else "1" #pick one randomly if multiple answers left. If there are no answers left choose 1 (shouldn't happen)
 
 
 
@@ -316,6 +316,7 @@ class Agent:
         return pos
 
     def FrameSimilarity(self,A):
+        #determine if all shapes in a frame share properties or not
         A_Objs = A.getObjects()
         frameDesc = []
         shape = []
